@@ -25,7 +25,7 @@ func TestBuildAndWriteJSON(t *testing.T) {
 		RootCause: attribution.RootCause{Category: attribution.CauseWrongTool, Detail: "missing expected tool", Confidence: 1.0},
 		CausalChain: []int{2},
 	}
-	r := Build("v1", perSample, map[string]*attribution.Attribution{"s2": attr})
+	r := Build("v1", perSample, map[string]*attribution.Attribution{"s2": attr}, nil)
 
 	if r.Schema != Schema {
 		t.Errorf("expected schema %s, got %s", Schema, r.Schema)
@@ -58,7 +58,7 @@ func TestWriteMarkdown(t *testing.T) {
 			{Metric: "tool_correctness", Passed: true, Score: 1.0, Reason: "ok"},
 		},
 	}
-	r := Build("v1", perSample, nil)
+	r := Build("v1", perSample, nil, nil)
 
 	var buf bytes.Buffer
 	if err := r.WriteMarkdown(&buf); err != nil {

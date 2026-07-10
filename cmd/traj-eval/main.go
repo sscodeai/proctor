@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/hermes/trajectory-eval/metrics/judge"
 	"github.com/hermes/trajectory-eval/report"
 	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/hermes/trajectory-eval/web"
 )
 
 func main() {
@@ -50,9 +52,28 @@ func run(args []string) error {
 		return runDiff(rest)
 	case "gate":
 		return runGate(rest)
+	case "serve":
+		return runServe(rest)
 	default:
-		return fmt.Errorf("unknown command %q (eval|diff|gate)", cmd)
+		return fmt.Errorf("unknown command %q (eval|diff|gate|serve)", cmd)
 	}
+}
+
+// runServe starts the visualization UI server for a report file.
+func runServe(args []string) error {
+	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	reportPath := fs.String("report", "", "path to report JSON to visualize")
+	addr := fs.String("addr", "127.0.0.1:8787", "listen address")
+	basePath := fs.String("base", "/", "base path prefix")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *reportPath == "" {
+		return fmt.Errorf("--report is required")
+	}
+	srv := &web.Server{ReportPath: *reportPath, BasePath: *basePath}
+	fmt.Fprintf(os.Stderr, "traj-eval: visualization UI at http://%s%s\n", *addr, *basePath)
+	return http.ListenAndServe(*addr, srv.Handler())
 }
 
 // buildJudge constructs a JudgeFunc from env if LLM creds exist, else nil.
@@ -108,6 +129,7 @@ func runEval(args []string) error {
 
 	perSample := map[string][]trajectory.Result{}
 	attribs := map[string]*attribution.Attribution{}
+	stepsMap := map[string][]trajectory.Step{}
 	for i := range samples {
 		s := samples[i]
 		if s.Name == "" {
@@ -118,6 +140,7 @@ func runEval(args []string) error {
 			return fmt.Errorf("evaluate %q: %w", s.Name, err)
 		}
 		perSample[s.Name] = results
+		stepsMap[s.Name] = s.Steps
 		a, err := analyzer.Analyze(ctx, s, results)
 		if err != nil {
 			return fmt.Errorf("attribute %q: %w", s.Name, err)
@@ -127,7 +150,7 @@ func runEval(args []string) error {
 		}
 	}
 
-	r := report.Build(*commit, perSample, attribs)
+	r := report.Build(*commit, perSample, attribs, stepsMap)
 
 	var w *os.File
 	if *out != "" && *out != "-" {

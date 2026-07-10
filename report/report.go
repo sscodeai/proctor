@@ -16,10 +16,11 @@ import (
 // Schema is the fixed report schema version.
 const Schema = "traj-eval-report/v1"
 
-// SampleReport is one sample's metrics + attribution.
+// SampleReport is one sample's metrics + attribution + trajectory.
 type SampleReport struct {
 	Sample      string                    `json:"sample"`
 	Meta        map[string]string         `json:"meta,omitempty"`
+	Steps       []trajectory.Step         `json:"steps,omitempty"`
 	Results     []trajectory.Result       `json:"results"`
 	Attribution *attribution.Attribution  `json:"attribution,omitempty"`
 	Passed      bool                      `json:"passed"`
@@ -51,7 +52,8 @@ type Report struct {
 }
 
 // Build assembles a Report from per-sample results.
-func Build(commit string, perSample map[string][]trajectory.Result, attrib map[string]*attribution.Attribution) Report {
+// steps carries each sample's trajectory for the visualization UI.
+func Build(commit string, perSample map[string][]trajectory.Result, attrib map[string]*attribution.Attribution, steps map[string][]trajectory.Step) Report {
 	names := make([]string, 0, len(perSample))
 	for n := range perSample {
 		names = append(names, n)
@@ -81,6 +83,9 @@ func Build(commit string, perSample map[string][]trajectory.Result, attrib map[s
 			}
 		}
 		sr := SampleReport{Sample: name, Results: results, Passed: passed}
+		if st, ok := steps[name]; ok {
+			sr.Steps = st
+		}
 		if a, ok := attrib[name]; ok {
 			sr.Attribution = a
 		}
