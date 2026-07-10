@@ -1,4 +1,6 @@
-// Package ingest loads evaluation datasets (samples) from JSON/JSONL files.
+// Package ingest loads evaluation datasets (samples) from JSON/JSONL files
+// and converts external agent-trajectory formats into the internal Sample
+// model (record-then-evaluate: no runtime instrumentation needed).
 package ingest
 
 import (
@@ -14,6 +16,7 @@ import (
 // LoadSamples reads a dataset file. Supported formats:
 //   - .json:  {"samples": [...]} or a bare array of samples
 //   - .jsonl: one sample per line
+//   - .traj.json: an external trajectory export (OpenAI / LangGraph)
 func LoadSamples(path string) ([]trajectory.Sample, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -26,6 +29,17 @@ func LoadSamples(path string) ([]trajectory.Sample, error) {
 func ParseSamples(data []byte, path string) ([]trajectory.Sample, error) {
 	if len(path) >= 6 && path[len(path)-6:] == ".jsonl" {
 		return parseJSONL(data)
+	}
+	// Try external trajectory formats first (they have distinct envelopes).
+	if samples, ok, err := ParseOpenAITrace(data); err != nil {
+		return nil, fmt.Errorf("parse OpenAI trace: %w", err)
+	} else if ok {
+		return samples, nil
+	}
+	if samples, ok, err := ParseLangGraphTrace(data); err != nil {
+		return nil, fmt.Errorf("parse LangGraph trace: %w", err)
+	} else if ok {
+		return samples, nil
 	}
 	return parseJSON(data)
 }
