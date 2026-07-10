@@ -51,8 +51,9 @@ type Span struct {
 
 // Turn is one message in a multi-turn conversation (for tool_use metric).
 type Turn struct {
-	Role    string `json:"role"`    // "user" | "assistant"
-	Content string `json:"content"` // message text
+	Role      string     `json:"role"`      // "user" | "assistant"
+	Content   string     `json:"content"`   // message text
+	ToolCalls []ToolCall `json:"tool_calls,omitempty"` // tool calls made in this turn
 }
 
 // Sample is one row of a golden dataset plus the system's actual trajectory.

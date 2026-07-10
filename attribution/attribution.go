@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/hermes/trajectory-eval/metrics"
+	"github.com/hermes/trajectory-eval/metrics/judge"
 	"github.com/hermes/trajectory-eval/trajectory"
 )
 
@@ -61,7 +61,7 @@ type Attribution struct {
 
 // Analyzer runs the attribution pipeline.
 type Analyzer struct {
-	Judge      metrics.JudgeFunc // nil = pure deterministic attribution
+	Judge      judge.JudgeFunc // nil = pure deterministic attribution
 	Thresholds Thresholds
 }
 

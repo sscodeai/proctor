@@ -1,15 +1,21 @@
-// Command traj-eval evaluates agent trajectories: load a dataset, run the
-// deterministic agent metrics, attribute failures, and write JSON/Markdown
-// reports. Usage:
+// Command traj-eval evaluates agent trajectories: load a dataset, run agent
+// metrics (deterministic + optional LLM-as-Judge), attribute failures, and
+// write JSON/Markdown reports. Also provides V1-vs-V2 diff and CI gate.
 //
-//	traj-eval eval --dataset examples/golden.json --out report.json
-//	traj-eval eval --dataset examples/golden.json --out report.md --format markdown
+// Usage:
 //
-// Deterministic-only in M0 (no LLM judge); judge metrics arrive in M1.
+//	traj-eval eval --dataset examples/golden.json [--format json|markdown] [--out f] [--commit v1] [--judge]
+//	traj-eval diff --base v1.json --current v2.json [--out f]
+//	traj-eval gate --current v2.json [--config gate.yaml]
+//
+// Judge metrics require LLM_BASE_URL / LLM_API_KEY / LLM_MODEL env vars
+// (any OpenAI-compatible endpoint; deepseek works). Without them, only
+// deterministic metrics run.
 package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -17,8 +23,10 @@ import (
 
 	"github.com/hermes/trajectory-eval/attribution"
 	"github.com/hermes/trajectory-eval/ingest"
+	"github.com/hermes/trajectory-eval/llmjudge"
 	"github.com/hermes/trajectory-eval/metrics"
 	"github.com/hermes/trajectory-eval/metrics/agent"
+	"github.com/hermes/trajectory-eval/metrics/judge"
 	"github.com/hermes/trajectory-eval/report"
 	"github.com/hermes/trajectory-eval/trajectory"
 )
@@ -31,19 +39,43 @@ func main() {
 }
 
 func run(args []string) error {
-	// Support both `traj-eval eval --dataset ...` and `traj-eval --dataset ...`.
-	if len(args) > 0 && args[0] == "eval" {
-		args = args[1:]
+	if len(args) == 0 {
+		return fmt.Errorf("usage: traj-eval <eval|diff|gate> [flags]")
 	}
-	fs := flag.NewFlagSet("traj-eval", flag.ExitOnError)
-	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "Usage: traj-eval eval [flags]\n\nFlags:\n")
-		fs.PrintDefaults()
+	cmd, rest := args[0], args[1:]
+	switch cmd {
+	case "eval":
+		return runEval(rest)
+	case "diff":
+		return runDiff(rest)
+	case "gate":
+		return runGate(rest)
+	default:
+		return fmt.Errorf("unknown command %q (eval|diff|gate)", cmd)
 	}
+}
+
+// buildJudge constructs a JudgeFunc from env if LLM creds exist, else nil.
+// When nil, only deterministic metrics run. When --judge is given but creds
+// are missing, it's an error (explicit request).
+func buildJudge(wantJudge bool) (judge.JudgeFunc, error) {
+	if !wantJudge {
+		return nil, nil
+	}
+	client, err := llmjudge.FromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("--judge requested but LLM not configured: %w (set LLM_BASE_URL/LLM_API_KEY/LLM_MODEL)", err)
+	}
+	return client.Judge(), nil
+}
+
+func runEval(args []string) error {
+	fs := flag.NewFlagSet("eval", flag.ExitOnError)
 	dataset := fs.String("dataset", "", "path to dataset file (.json or .jsonl)")
 	out := fs.String("out", "", "output file path (default stdout)")
 	format := fs.String("format", "json", "report format: json | markdown")
 	commit := fs.String("commit", "", "version label (V1/V2) recorded in the report")
+	wantJudge := fs.Bool("judge", false, "enable LLM-as-Judge metrics (requires LLM_* env)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -51,7 +83,7 @@ func run(args []string) error {
 		return fmt.Errorf("--dataset is required")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	samples, err := ingest.LoadSamples(*dataset)
@@ -62,13 +94,17 @@ func run(args []string) error {
 		return fmt.Errorf("dataset %q contains no samples", *dataset)
 	}
 
-	// M0 metric set: deterministic only.
-	metricSet := []metrics.Metric{
-		metrics.Named("tool_correctness", agent.ToolCorrectness{}),
-		metrics.Named("agent_loop_detection", agent.NewAgentLoopDetection()),
+	j, err := buildJudge(*wantJudge)
+	if err != nil {
+		return err
 	}
 
-	analyzer := attribution.Analyzer{Thresholds: attribution.DefaultThresholds()}
+	metricSet := buildMetricSet(j)
+
+	analyzer := attribution.Analyzer{
+		Judge:      j,
+		Thresholds: attribution.DefaultThresholds(),
+	}
 
 	perSample := map[string][]trajectory.Result{}
 	attribs := map[string]*attribution.Attribution{}
@@ -125,6 +161,118 @@ func run(args []string) error {
 	return nil
 }
 
+func runDiff(args []string) error {
+	fs := flag.NewFlagSet("diff", flag.ExitOnError)
+	base := fs.String("base", "", "base report JSON (V1)")
+	current := fs.String("current", "", "current report JSON (V2)")
+	out := fs.String("out", "", "output file (default stdout)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *base == "" || *current == "" {
+		return fmt.Errorf("--base and --current are required")
+	}
+	v1, err := report.LoadReport(*base)
+	if err != nil {
+		return fmt.Errorf("load base: %w", err)
+	}
+	v2, err := report.LoadReport(*current)
+	if err != nil {
+		return fmt.Errorf("load current: %w", err)
+	}
+	items := report.Diff(v1, v2)
+
+	var w *os.File = os.Stdout
+	if *out != "" && *out != "-" {
+		f, err := os.Create(*out)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		w = f
+	}
+
+	fmt.Fprintf(w, "%-24s %-6s -> %-6s %-10s %s\n", "Sample", "V1", "V2", "Change", "RC Changed")
+	fmt.Fprintln(w, "----------------------------------------")
+	for _, it := range items {
+		fmt.Fprintf(w, "%-24s %-6s -> %-6s %-10s %v\n", it.Sample, it.From, it.To, it.Change, it.RootCauseChanged)
+	}
+
+	// Summary counts.
+	regressed, fixed := 0, 0
+	for _, it := range items {
+		if it.Change == "regressed" {
+			regressed++
+		}
+		if it.Change == "fixed" {
+			fixed++
+		}
+	}
+	fmt.Fprintf(w, "\n%d regressed, %d fixed\n", regressed, fixed)
+	if regressed > 0 {
+		return fmt.Errorf("diff: %d regressed sample(s)", regressed)
+	}
+	return nil
+}
+
+func runGate(args []string) error {
+	fs := flag.NewFlagSet("gate", flag.ExitOnError)
+	current := fs.String("current", "", "current report JSON")
+	config := fs.String("config", "", "gate config YAML/JSON")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *current == "" {
+		return fmt.Errorf("--current is required")
+	}
+	r, err := report.LoadReport(*current)
+	if err != nil {
+		return fmt.Errorf("load report: %w", err)
+	}
+
+	var g report.Gate
+	if *config != "" {
+		data, err := os.ReadFile(*config)
+		if err != nil {
+			return err
+		}
+		// Accept JSON config for now (YAML later).
+		if err := jsonUnmarshal(data, &g); err != nil {
+			return fmt.Errorf("parse gate config: %w", err)
+		}
+	} else {
+		g = report.Gate{MinPassRate: 1.0}
+	}
+
+	passed, failures := g.Evaluate(r)
+	if !passed {
+		for _, f := range failures {
+			fmt.Fprintln(os.Stderr, "gate:", f)
+		}
+		return fmt.Errorf("gate FAILED")
+	}
+	fmt.Fprintln(os.Stderr, "gate: PASS")
+	return nil
+}
+
+func buildMetricSet(j judge.JudgeFunc) []metrics.Metric {
+	ms := []metrics.Metric{
+		metrics.Named("tool_correctness", agent.ToolCorrectness{}),
+		metrics.Named("agent_loop_detection", agent.NewAgentLoopDetection()),
+	}
+	if j != nil {
+		ms = append(ms,
+			metrics.Named("argument_correctness", agent.ArgumentCorrectness{Judge: j, PassThreshold: 0.7}),
+			metrics.Named("task_completion", agent.TaskCompletion{Judge: j, PassThreshold: 0.7}),
+			metrics.Named("step_efficiency", agent.StepEfficiency{Judge: j, PassThreshold: 0.7}),
+			metrics.Named("plan_quality", agent.PlanQuality{Judge: j, PassThreshold: 0.7}),
+			metrics.Named("plan_adherence", agent.PlanAdherence{Judge: j, PassThreshold: 0.7}),
+			metrics.Named("tool_use", agent.ToolUse{Judge: j, PassThreshold: 0.7}),
+		)
+	}
+	return ms
+}
+
 func passedCount(r report.Report) int {
 	n := 0
 	for _, s := range r.Samples {
@@ -133,4 +281,9 @@ func passedCount(r report.Report) int {
 		}
 	}
 	return n
+}
+
+// jsonUnmarshal is a tiny alias to keep gate config parsing simple.
+func jsonUnmarshal(data []byte, v any) error {
+	return json.Unmarshal(data, v)
 }
