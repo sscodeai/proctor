@@ -1,0 +1,38 @@
+{
+  "samples": [
+    {
+      "name": "order_lookup_ok",
+      "input": "Find all orders for user 42",
+      "expected_tools": ["get_user", "search_orders"],
+      "steps": [
+        {"index": 0, "kind": "reasoning", "text": "I need the user record first"},
+        {"index": 1, "kind": "tool_call", "tool_call": {"name": "get_user", "args": {"user_id": 42}}},
+        {"index": 2, "kind": "observation", "text": "user found: Alice"},
+        {"index": 3, "kind": "tool_call", "tool_call": {"name": "search_orders", "args": {"user_id": 42}}},
+        {"index": 4, "kind": "observation", "text": "3 orders returned"}
+      ]
+    },
+    {
+      "name": "order_lookup_wrong_tool",
+      "input": "Find all orders for user 42",
+      "expected_tools": ["get_user", "search_orders"],
+      "steps": [
+        {"index": 0, "kind": "reasoning", "text": "I need the user record first"},
+        {"index": 1, "kind": "tool_call", "tool_call": {"name": "get_user", "args": {"user_id": 42}}},
+        {"index": 2, "kind": "tool_call", "tool_call": {"name": "delete_order", "args": {"order_id": 7}}},
+        {"index": 3, "kind": "observation", "text": "order deleted"}
+      ]
+    },
+    {
+      "name": "stuck_in_loop",
+      "input": "Search for the same thing repeatedly",
+      "expected_tools": ["web_search"],
+      "steps": [
+        {"index": 0, "kind": "tool_call", "tool_call": {"name": "web_search", "args": {"query": "best coffee"}}},
+        {"index": 1, "kind": "tool_call", "tool_call": {"name": "web_search", "args": {"query": "best coffee"}}},
+        {"index": 2, "kind": "tool_call", "tool_call": {"name": "web_search", "args": {"query": "best coffee"}}},
+        {"index": 3, "kind": "tool_call", "tool_call": {"name": "web_search", "args": {"query": "best coffee"}}}
+      ]
+    }
+  ]
+}
