@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>trajectory-eval — Agent Trajectory Evaluation Report</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #171a23; --panel2: #1e2230;
+    --text: #e6e8ee; --muted: #8b93a7;
+    --pass: #34d399; --fail: #f87171;
+    --accent: #60a5fa; --warn: #fbbf24;
+    --border: #2a2f3e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.6 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 24px; max-width: 1100px; margin: 0 auto;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: var(--muted); margin-bottom: 20px; font-size: 13px; }
+  .overall { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .overall.pass { color: var(--pass); }
+  .overall.fail { color: var(--fail); }
+
+  .summary-table, .samples-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+  .badge.pass { background: rgba(52,211,153,.15); color: var(--pass); }
+  .badge.fail { background: rgba(248,113,113,.15); color: var(--fail); }
+
+  .sample { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+  .sample-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .sample-header h2 { font-size: 16px; flex: 1; }
+  .sample-header .input { color: var(--muted); font-size: 12px; width: 100%; }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin: 12px 0; }
+  .metric-cell { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .metric-cell .mname { font-size: 11px; color: var(--muted); }
+  .metric-cell .mscore { font-size: 16px; font-weight: 600; }
+  .metric-cell.pass .mscore { color: var(--pass); }
+  .metric-cell.fail .mscore { color: var(--fail); }
+  .metric-cell .mreason { font-size: 11px; color: var(--muted); margin-top: 2px; word-break: break-all; }
+
+  .attribution { background: rgba(96,165,250,.07); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  .attribution h3 { font-size: 13px; color: var(--accent); margin-bottom: 6px; }
+  .attribution .rc { font-weight: 600; }
+  .attribution .chain { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .failure { margin: 6px 0; padding-left: 10px; border-left: 2px solid var(--fail); }
+  .failure .fstep { font-weight: 600; }
+  .evidence { font-size: 12px; color: var(--muted); margin-left: 14px; }
+  .evidence .src { color: var(--warn); font-family: ui-monospace, monospace; }
+
+  .trajectory { margin: 12px 0; padding: 10px 14px; background: var(--panel2); border-radius: 8px; font-size: 13px; }
+  .trajectory .tstep { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--border); }
+  .trajectory .tstep:last-child { border-bottom: none; }
+  .trajectory .tidx { color: var(--muted); font-family: ui-monospace, monospace; min-width: 24px; }
+  .kind { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; padding: 0 6px; border-radius: 4px; align-self: center; }
+  .kind.reasoning { background: rgba(96,165,250,.15); color: var(--accent); }
+  .kind.tool_call { background: rgba(251,191,36,.15); color: var(--warn); }
+  .kind.observation { background: rgba(52,211,153,.15); color: var(--pass); }
+  .tool { font-family: ui-monospace, monospace; color: var(--warn); }
+  .ttext { color: var(--muted); }
+
+  .footer { color: var(--muted); font-size: 12px; margin-top: 30px; text-align: center; }
+  .error { color: var(--fail); padding: 20px; text-align: center; }
+  .loading { color: var(--muted); text-align: center; padding: 40px; }
+</style>
+</head>
+<body>
+<h1>trajectory-eval <span style="font-weight:400;color:var(--muted)">Agent Trajectory Evaluation Report</span></h1>
+<div class="sub" id="report-meta">Loading…</div>
+<div id="content"><div class="loading">⏳ Loading report…</div></div>
+<div class="footer">trajectory-eval · causal failure attribution for agent trajectories</div>
+
+<script>
+async function load() {
+  try {
+    const res = await fetch('api/report');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rep = await res.json();
+    render(rep);
+  } catch (e) {
+    document.getElementById('content').innerHTML =
+      '<div class="error">Failed to load report:' + e.message +
+      '<br><br>Run <code>traj-eval eval --dataset ... --out report.json</code> to generate a report, then start the serve command pointing at it.</div>';
+  }
+}
+
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : String(s);
+  return div.innerHTML;
+}
+
+function badge(passed) {
+  return passed ? '<span class="badge pass">PASS</span>' : '<span class="badge fail">FAIL</span>';
+}
+
+function render(rep) {
+  document.getElementById('report-meta').textContent =
+    'Schema: ' + rep.schema + (rep.commit ? ' · Commit: ' + rep.commit : '') +
+    ' · Samples: ' + rep.samples.length;
+  document.getElementById('report-meta').textContent +=
+    ' · Metrics: ' + rep.summary.map(s => s.metric).join(', ');
+
+  let html = '<div class="overall ' + (rep.failed ? 'fail' : 'pass') + '">' +
+    (rep.failed ? '❌ FAIL' : '✅ PASS') + '</div>';
+
+  // Summary table
+  if (rep.summary && rep.summary.length) {
+    html += '<table class="summary-table"><tr><th>Metric</th><th>Pass Rate</th><th>Mean Score</th><th>Passed/Total</th></tr>';
+    for (const s of rep.summary) {
+      html += '<tr><td>' + esc(s.metric) + '</td><td>' + Math.round(s.pass_rate * 100) + '%</td>' +
+        '<td>' + s.mean_score.toFixed(2) + '</td><td>' + s.passed + '/' + s.total + '</td></tr>';
+    }
+    html += '</table>';
+  }
+
+  // Per-sample details
+  for (const s of rep.samples) {
+    html += '<div class="sample">';
+    html += '<div class="sample-header"><h2>' + esc(s.sample) + ' ' + badge(s.passed) + '</h2>';
+    if (s.meta && s.meta.input) html += '<div class="input">Task: ' + esc(s.meta.input) + '</div>';
+    html += '</div>';
+
+    // Metric grid
+    html += '<div class="metric-grid">';
+    for (const m of s.results || []) {
+      const cls = m.passed ? 'pass' : 'fail';
+      html += '<div class="metric-cell ' + cls + '">' +
+        '<div class="mname">' + esc(m.metric) + '</div>' +
+        '<div class="mscore">' + (m.score * 100).toFixed(0) + '</div>' +
+        (m.reason ? '<div class="mreason">' + esc(m.reason) + '</div>' : '') +
+        '</div>';
+    }
+    html += '</div>';
+
+    // Attribution
+    if (s.attribution) {
+      const a = s.attribution;
+      html += '<div class="attribution"><h3>🔍 Attribution</h3>';
+      html += '<div class="rc">Root cause: ' + esc(a.root_cause.category) +
+        ' (confidence ' + a.root_cause.confidence.toFixed(2) + ')' +
+        (a.root_cause.detail ? ' — ' + esc(a.root_cause.detail) : '') + '</div>';
+      if (a.causal_chain && a.causal_chain.length) {
+        html += '<div class="chain">Causal chain: ' + a.causal_chain.map(i => 'step ' + i).join(' → ') + '</div>';
+      }
+      for (const f of a.key_failures || []) {
+        html += '<div class="failure"><span class="fstep">Step ' + f.step_index + ' (' + esc(f.step_kind) + ')</span>: ' + esc(f.summary);
+        if (f.constraint) html += ' <span style="color:var(--muted)">[' + esc(f.constraint) + ']</span>';
+        html += '</div>';
+        for (const ev of f.evidence || []) {
+          html += '<div class="evidence"><span class="src">' + esc(ev.source) + '</span>: ' + esc(ev.assertion) +
+            (ev.detail ? ' — ' + esc(ev.detail) : '') + '</div>';
+        }
+      }
+      html += '</div>';
+    }
+
+    // Trajectory steps (if the report carried them — sample.steps)
+    if (s.steps && s.steps.length) {
+      html += '<div class="trajectory">';
+      for (const st of s.steps) {
+        html += '<div class="tstep"><span class="tidx">' + st.index + '</span>' +
+          '<span class="kind ' + esc(st.kind) + '">' + esc(st.kind) + '</span>' +
+          (st.tool_call ? '<span class="tool">' + esc(st.tool_call.name) + '</span>' : '') +
+          (st.text ? '<span class="ttext">' + esc(st.text) + '</span>' : '') + '</div>';
+      }
+      html += '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+load();
+</script>
+</body>
+</html>
