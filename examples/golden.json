@@ -33,6 +33,30 @@
         {"index": 2, "kind": "tool_call", "tool_call": {"name": "web_search", "args": {"query": "best coffee"}}},
         {"index": 3, "kind": "tool_call", "tool_call": {"name": "web_search", "args": {"query": "best coffee"}}}
       ]
+    },
+    {
+      "name": "multi_turn_refund",
+      "input": "User wants a refund for order 7. Ask for the reason, verify eligibility, then process it.",
+      "expected_tools": ["get_order", "check_refund_eligibility", "process_refund"],
+      "turns": [
+        {"role": "user", "content": "I want a refund for order 7"},
+        {"role": "assistant", "content": "Let me look up your order", "tool_calls": [{"name": "get_order", "args": {"order_id": 7}}]},
+        {"role": "user", "content": "It's the red shoes"},
+        {"role": "assistant", "content": "Checking eligibility", "tool_calls": [{"name": "check_refund_eligibility", "args": {"order_id": 7}}]},
+        {"role": "user", "content": "Yes please proceed"},
+        {"role": "assistant", "content": "Processing your refund", "tool_calls": [{"name": "process_refund", "args": {"order_id": 7}}]}
+      ]
+    },
+    {
+      "name": "multi_turn_wrong_tool",
+      "input": "User wants to cancel subscription 99.",
+      "expected_tools": ["get_subscription", "cancel_subscription"],
+      "turns": [
+        {"role": "user", "content": "Cancel my subscription"},
+        {"role": "assistant", "content": "Let me find it", "tool_calls": [{"name": "get_subscription", "args": {"sub_id": 99}}]},
+        {"role": "user", "content": "Yes that's the one"},
+        {"role": "assistant", "content": "Deleting your account instead", "tool_calls": [{"name": "delete_account", "args": {"user_id": 1}}]}
+      ]
     }
   ]
 }
