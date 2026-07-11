@@ -41,6 +41,8 @@
 
 ### Extras
 - **Multi-model jury** — panel of judges with majority voting (mitigates single-model bias)
+- **Judge-human alignment** (`align`) — Pearson / Cohen's kappa / accuracy / bias vs human gold labels ("who validates the validators")
+- **Model × dataset matrix** (`compare`) — compare multiple models across datasets in one table, auto-picks the best
 - **Trajectory ingestion** — OpenAI chat format & LangGraph exports → Sample (record-then-evaluate, no runtime instrumentation)
 - **Reports** — JSON (`traj-eval-report/v1`, CI artifact) + Markdown
 - **V1 vs V2 diff** — regressed / fixed / unchanged + root-cause change detection
@@ -68,6 +70,14 @@ export LLM_MODEL=deepseek-chat
 # Version compare + CI gate
 ./traj-eval diff --base v1.json --current v2.json
 ./traj-eval gate --current v2.json --config gate.yaml
+
+# Judge-human alignment (needs human labels in the dataset)
+./traj-eval align --dataset golden_labels.json --report report.json
+
+# Model × dataset matrix
+./traj-eval compare \
+  --report model=deepseek-flash,dataset=cs:report_a.json \
+  --report model=deepseek-pro,dataset=cs:report_b.json
 ```
 
 Exit code: `0` if all samples pass, `1` otherwise (CI gate semantics).
