@@ -8,11 +8,11 @@ import (
 
 // DiffItem is one sample's status change between V1 and V2.
 type DiffItem struct {
-	Sample     string `json:"sample"`
-	From       string `json:"from"` // "PASS" | "FAIL"
-	To         string `json:"to"`
-	Change     string `json:"change"` // regressed | fixed | unchanged
-	RootCauseChanged bool `json:"root_cause_changed,omitempty"`
+	Sample           string `json:"sample"`
+	From             string `json:"from"` // "PASS" | "FAIL"
+	To               string `json:"to"`
+	Change           string `json:"change"` // regressed | fixed | unchanged
+	RootCauseChanged bool   `json:"root_cause_changed,omitempty"`
 }
 
 // Diff compares two reports and classifies per-sample changes.
@@ -56,9 +56,9 @@ func Diff(v1, v2 *Report) []DiffItem {
 
 // Gate is a CI gate definition.
 type Gate struct {
-	Metrics     []string          `json:"metrics,omitempty"`     // must all pass; empty = all
+	Metrics     []string           `json:"metrics,omitempty"`    // must all pass; empty = all
 	MinScores   map[string]float64 `json:"min_scores,omitempty"` // per-metric minimum score
-	MinPassRate float64           `json:"min_pass_rate"`         // global pass rate floor
+	MinPassRate float64            `json:"min_pass_rate"`        // global pass rate floor
 }
 
 // Evaluate returns whether the report passes the gate, plus failure reasons.

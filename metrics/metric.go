@@ -19,10 +19,10 @@ type JudgeFunc func(ctx context.Context, prompt string) (string, error)
 
 // Verdict is the parsed result of a judge call.
 type Verdict struct {
-	Passed   bool
-	Score    float64 // normalized 0..1
-	Reason   string
-	StepIdx  int // optional: step the verdict refers to (for attribution)
+	Passed  bool
+	Score   float64 // normalized 0..1
+	Reason  string
+	StepIdx int // optional: step the verdict refers to (for attribution)
 }
 
 // Metric evaluates one Sample and returns a Result.

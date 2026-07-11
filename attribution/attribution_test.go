@@ -11,8 +11,8 @@ import (
 
 func sampleWithWrongTool() trajectory.Sample {
 	return trajectory.Sample{
-		Name:     "wrong_tool_golden",
-		Input:    "Find orders for user 42",
+		Name:          "wrong_tool_golden",
+		Input:         "Find orders for user 42",
 		ExpectedTools: []string{"get_user", "search_orders"},
 		Steps: []trajectory.Step{
 			{Index: 0, Kind: trajectory.StepReasoning, Text: "I need user first"},
@@ -62,8 +62,8 @@ func TestAnalyzeLocatesWrongTool(t *testing.T) {
 
 func TestAnalyzeCleanRunNoAttribution(t *testing.T) {
 	s := trajectory.Sample{
-		Name:     "clean",
-		Input:    "hi",
+		Name:          "clean",
+		Input:         "hi",
 		ExpectedTools: []string{"greet"},
 		Steps: []trajectory.Step{
 			{Index: 0, Kind: trajectory.StepToolCall, ToolCall: &trajectory.ToolCall{Name: "greet"}},
@@ -91,8 +91,8 @@ func TestAnalyzeCleanRunNoAttribution(t *testing.T) {
 
 func TestAnalyzeLoopRootCause(t *testing.T) {
 	s := trajectory.Sample{
-		Name:     "loop",
-		Input:    "search repeatedly",
+		Name:          "loop",
+		Input:         "search repeatedly",
 		ExpectedTools: []string{"search"},
 		Steps: []trajectory.Step{
 			{Index: 0, Kind: trajectory.StepToolCall, ToolCall: &trajectory.ToolCall{Name: "search", Args: map[string]any{"q": "x"}}},
@@ -124,8 +124,8 @@ func TestJudgeFallback(t *testing.T) {
 	// task_completion fails but no deterministic metric locates a step:
 	// judge fallback should kick in.
 	s := trajectory.Sample{
-		Name:     "judge_fallback",
-		Input:    "do the thing",
+		Name:          "judge_fallback",
+		Input:         "do the thing",
 		ExpectedTools: []string{"search"},
 		Steps: []trajectory.Step{
 			{Index: 0, Kind: trajectory.StepReasoning, Text: "thinking about it"},

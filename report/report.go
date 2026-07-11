@@ -18,12 +18,12 @@ const Schema = "traj-eval-report/v1"
 
 // SampleReport is one sample's metrics + attribution + trajectory.
 type SampleReport struct {
-	Sample      string                    `json:"sample"`
-	Meta        map[string]string         `json:"meta,omitempty"`
-	Steps       []trajectory.Step         `json:"steps,omitempty"`
-	Results     []trajectory.Result       `json:"results"`
-	Attribution *attribution.Attribution  `json:"attribution,omitempty"`
-	Passed      bool                      `json:"passed"`
+	Sample      string                   `json:"sample"`
+	Meta        map[string]string        `json:"meta,omitempty"`
+	Steps       []trajectory.Step        `json:"steps,omitempty"`
+	Results     []trajectory.Result      `json:"results"`
+	Attribution *attribution.Attribution `json:"attribution,omitempty"`
+	Passed      bool                     `json:"passed"`
 }
 
 // MetricSummary aggregates one metric across all samples.

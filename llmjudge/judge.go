@@ -37,10 +37,10 @@ type Options struct {
 
 // Client is a thin OpenAI-compatible chat client that exposes a JudgeFunc.
 type Client struct {
-	opts   Options
-	http   *http.Client
-	mu     sync.Mutex
-	last   judge.Usage
+	opts Options
+	http *http.Client
+	mu   sync.Mutex
+	last judge.Usage
 }
 
 // FromEnv builds a Client from LLM_BASE_URL / LLM_API_KEY / LLM_MODEL.
@@ -63,7 +63,7 @@ func New(opts Options) (*Client, error) {
 		opts.Timeout = 60 * time.Second
 	}
 	if opts.MaxTokens == 0 {
-		opts.MaxTokens = 1024
+		opts.MaxTokens = 2048
 	}
 	return &Client{
 		opts: opts,
@@ -93,7 +93,8 @@ type chatMessage struct {
 type chatResponse struct {
 	Choices []struct {
 		Message struct {
-			Content string `json:"content"`
+			Content   string `json:"content"`
+			Reasoning string `json:"reasoning"`
 		} `json:"message"`
 	} `json:"choices"`
 	Usage *struct {
@@ -110,7 +111,7 @@ func (c *Client) chat(ctx context.Context, prompt string) (string, error) {
 	body, _ := json.Marshal(chatRequest{
 		Model: c.opts.Model,
 		Messages: []chatMessage{
-			{Role: "system", Content: "You are an objective evaluation judge. Respond only with valid JSON."},
+			{Role: "system", Content: "You are an objective evaluation judge. Respond with ONLY the requested JSON in the content field — no reasoning, no markdown, no commentary. Do not put the answer in a reasoning field."},
 			{Role: "user", Content: prompt},
 		},
 		Temperature: c.opts.Temperature,
@@ -160,7 +161,53 @@ func (c *Client) chat(ctx context.Context, prompt string) (string, error) {
 		c.mu.Unlock()
 	}
 
-	return parsed.Choices[0].Message.Content, nil
+	content := parsed.Choices[0].Message.Content
+	// Some reasoning models (e.g. deepseek-v4-flash via some gateways) put
+	// the answer inside `reasoning` and leave content empty. The reasoning
+	// field mixes prose with the final JSON — extract just the JSON object.
+	if strings.TrimSpace(content) == "" {
+		content = extractJSONFromText(parsed.Choices[0].Message.Reasoning)
+	}
+	return content, nil
+}
+
+// extractJSONFromText finds the first JSON OBJECT inside a text blob
+// (used to salvage answers from reasoning fields). Arrays are skipped —
+// judge responses are always objects, and arrays in reasoning are usually
+// conversation noise like "[0] user: ...". Returns the raw text if no
+// object is found so the caller's own JSON extraction can fail with context.
+func extractJSONFromText(s string) string {
+	start := -1
+	depth := 0
+	inStr := false
+	esc := false
+	for i, r := range s {
+		if inStr {
+			if esc {
+				esc = false
+			} else if r == '\\' {
+				esc = true
+			} else if r == '"' {
+				inStr = false
+			}
+			continue
+		}
+		switch r {
+		case '"':
+			inStr = true
+		case '{':
+			if start == -1 {
+				start = i
+			}
+			depth++
+		case '}':
+			depth--
+			if depth == 0 && start != -1 {
+				return s[start : i+1]
+			}
+		}
+	}
+	return s
 }
 
 // LastUsage returns the most recent call's usage (for Meter.UsageFn).

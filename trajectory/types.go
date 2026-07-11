@@ -31,11 +31,11 @@ type ToolCall struct {
 // Step is one ordered step in a trajectory. Unlike eval-go's flat []string,
 // Step is structured so the attribution layer can locate "which step" failed.
 type Step struct {
-	Index    int        `json:"index"`
-	Kind     StepKind   `json:"kind"` // reasoning | tool_call | observation
-	Text     string     `json:"text,omitempty"`
-	ToolCall *ToolCall  `json:"tool_call,omitempty"`
-	SpanID   string     `json:"span_id,omitempty"` // passthrough from tracing systems
+	Index    int       `json:"index"`
+	Kind     StepKind  `json:"kind"` // reasoning | tool_call | observation
+	Text     string    `json:"text,omitempty"`
+	ToolCall *ToolCall `json:"tool_call,omitempty"`
+	SpanID   string    `json:"span_id,omitempty"` // passthrough from tracing systems
 }
 
 // Span is an optional tree model of a trajectory, used by agent loop
@@ -51,8 +51,8 @@ type Span struct {
 
 // Turn is one message in a multi-turn conversation (for tool_use metric).
 type Turn struct {
-	Role      string     `json:"role"`      // "user" | "assistant"
-	Content   string     `json:"content"`   // message text
+	Role      string     `json:"role"`                 // "user" | "assistant"
+	Content   string     `json:"content"`              // message text
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"` // tool calls made in this turn
 }
 
@@ -69,11 +69,11 @@ type Sample struct {
 	Meta     map[string]string `json:"meta,omitempty"`
 
 	// --- trajectory (structured) ---
-	Plan          string     `json:"plan,omitempty"`                     // the agent's stated plan
-	Steps         []Step     `json:"steps,omitempty"`                    // ordered trajectory steps
-	ToolCalls     []ToolCall `json:"tool_calls,omitempty"`               // convenience view (projection of tool_call steps)
-	ExpectedTools []string   `json:"expected_tools,omitempty"`           // ground-truth tool names for tool_correctness
-	Spans         *Span      `json:"spans,omitempty"`                    // tree for loop detection
+	Plan          string     `json:"plan,omitempty"`           // the agent's stated plan
+	Steps         []Step     `json:"steps,omitempty"`          // ordered trajectory steps
+	ToolCalls     []ToolCall `json:"tool_calls,omitempty"`     // convenience view (projection of tool_call steps)
+	ExpectedTools []string   `json:"expected_tools,omitempty"` // ground-truth tool names for tool_correctness
+	Spans         *Span      `json:"spans,omitempty"`          // tree for loop detection
 
 	// --- multi-turn tool-use ---
 	Turns   []Turn `json:"turns,omitempty"`
@@ -96,17 +96,17 @@ func (s Sample) ToolCallsFromSteps() []ToolCall {
 type Result struct {
 	Metric  string  `json:"metric"`
 	Passed  bool    `json:"passed"`
-	Score   float64 `json:"score"`            // normalized 0..1
-	Reason  string  `json:"reason,omitempty"` // human-readable explanation
+	Score   float64 `json:"score"`              // normalized 0..1
+	Reason  string  `json:"reason,omitempty"`   // human-readable explanation
 	StepIdx int     `json:"step_idx,omitempty"` // optional: step located by a deterministic metric (for attribution)
-	Located bool    `json:"-"`                // true when StepIdx was explicitly set by a locating metric
+	Located bool    `json:"-"`                  // true when StepIdx was explicitly set by a locating metric
 }
 
 // Report is the top-level outcome of evaluating a dataset with a set of
 // metrics. Kept minimal here; the report package renders it.
 type Report struct {
-	Schema  string   `json:"schema"` // fixed "traj-eval-report/v1"
-	Commit  string   `json:"commit,omitempty"`
-	Samples []Sample `json:"samples"`
+	Schema  string              `json:"schema"` // fixed "traj-eval-report/v1"
+	Commit  string              `json:"commit,omitempty"`
+	Samples []Sample            `json:"samples"`
 	Results map[string][]Result `json:"results"` // sample name -> results
 }

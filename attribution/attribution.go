@@ -18,11 +18,11 @@ import (
 
 // FailureStep is the minimal attribution output: one key failing step.
 type FailureStep struct {
-	StepIndex  int        `json:"step_index"`
+	StepIndex  int                 `json:"step_index"`
 	StepKind   trajectory.StepKind `json:"step_kind"`
-	Summary    string     `json:"summary"`    // what went wrong at this step
-	Constraint string     `json:"constraint"` // the violated constraint (AgentRx semantics)
-	Evidence   []Evidence `json:"evidence"`   // evidence chain
+	Summary    string              `json:"summary"`    // what went wrong at this step
+	Constraint string              `json:"constraint"` // the violated constraint (AgentRx semantics)
+	Evidence   []Evidence          `json:"evidence"`   // evidence chain
 }
 
 // Evidence is one piece of evidence: who asserts, what, and on what basis.
@@ -36,13 +36,13 @@ type Evidence struct {
 type RootCauseCategory string
 
 const (
-	CauseWrongTool       RootCauseCategory = "wrong_tool"        // selected the wrong tool
-	CauseBadArguments    RootCauseCategory = "bad_arguments"     // argument error
-	CausePlanDeviation   RootCauseCategory = "plan_deviation"    // deviated from plan
-	CauseMissingStep     RootCauseCategory = "missing_step"      // skipped a required step
-	CauseRedundantLoop   RootCauseCategory = "redundant_loop"    // loop / repetition
+	CauseWrongTool        RootCauseCategory = "wrong_tool"        // selected the wrong tool
+	CauseBadArguments     RootCauseCategory = "bad_arguments"     // argument error
+	CausePlanDeviation    RootCauseCategory = "plan_deviation"    // deviated from plan
+	CauseMissingStep      RootCauseCategory = "missing_step"      // skipped a required step
+	CauseRedundantLoop    RootCauseCategory = "redundant_loop"    // loop / repetition
 	CauseInsufficientInfo RootCauseCategory = "insufficient_info" // not enough information
-	CauseUnknown         RootCauseCategory = "unknown"
+	CauseUnknown          RootCauseCategory = "unknown"
 )
 
 // RootCause is the root cause classification result.
@@ -54,9 +54,9 @@ type RootCause struct {
 
 // Attribution is the complete output of one analysis.
 type Attribution struct {
-	KeyFailures []FailureStep      `json:"key_failures"`
-	RootCause   RootCause          `json:"root_cause"`
-	CausalChain []int              `json:"causal_chain"` // ordered failing step indices
+	KeyFailures []FailureStep `json:"key_failures"`
+	RootCause   RootCause     `json:"root_cause"`
+	CausalChain []int         `json:"causal_chain"` // ordered failing step indices
 }
 
 // Analyzer runs the attribution pipeline.
@@ -85,18 +85,18 @@ func (a Analyzer) Analyze(ctx context.Context, s trajectory.Sample, results []tr
 		if r.Passed || !r.Located {
 			continue
 		}
-			st := stepAt(s, r.StepIdx)
-			failures = append(failures, FailureStep{
-				StepIndex:  r.StepIdx,
-				StepKind:   stepKindOf(st),
-				Summary:    r.Reason,
-				Constraint: constraintFor(r.Metric),
-				Evidence: []Evidence{{
-					Source:    "metric:" + r.Metric,
-					Assertion: r.Reason,
-					Detail:    fmt.Sprintf("score=%.2f step=%d", r.Score, r.StepIdx),
-				}},
-			})
+		st := stepAt(s, r.StepIdx)
+		failures = append(failures, FailureStep{
+			StepIndex:  r.StepIdx,
+			StepKind:   stepKindOf(st),
+			Summary:    r.Reason,
+			Constraint: constraintFor(r.Metric),
+			Evidence: []Evidence{{
+				Source:    "metric:" + r.Metric,
+				Assertion: r.Reason,
+				Detail:    fmt.Sprintf("score=%.2f step=%d", r.Score, r.StepIdx),
+			}},
+		})
 	}
 
 	// ③ Backtracking (TrajDebug): earliest deviation -> causal chain.

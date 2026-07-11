@@ -21,11 +21,11 @@ import (
 //
 // Weights: 0.40 / 0.35 / 0.25 (aligned with DeepEval). Deterministic — no LLM.
 type AgentLoopDetection struct {
-	RepetitionThreshold int     // default 3
-	StallThreshold      float64 // default 0.85
-	ToolRepeatWeight    float64 // default 0.40
+	RepetitionThreshold  int     // default 3
+	StallThreshold       float64 // default 0.85
+	ToolRepeatWeight     float64 // default 0.40
 	ReasoningStallWeight float64 // default 0.35
-	GraphCycleWeight    float64 // default 0.25
+	GraphCycleWeight     float64 // default 0.25
 }
 
 // NewAgentLoopDetection returns a metric with DeepEval-aligned defaults.

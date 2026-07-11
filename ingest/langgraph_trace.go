@@ -78,10 +78,10 @@ func langGraphTraceToSample(tr langGraphTrace) trajectory.Sample {
 			// Tool output as observation.
 			if n.Output != "" {
 				s.Steps = append(s.Steps, trajectory.Step{
-					Index:    i + 1,
-					Kind:     trajectory.StepObservation,
-					Text:     n.Output,
-					SpanID:   n.ID,
+					Index:  i + 1,
+					Kind:   trajectory.StepObservation,
+					Text:   n.Output,
+					SpanID: n.ID,
 				})
 			}
 		default: // llm / agent → reasoning step

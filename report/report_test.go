@@ -22,7 +22,7 @@ func TestBuildAndWriteJSON(t *testing.T) {
 		KeyFailures: []attribution.FailureStep{
 			{StepIndex: 2, Summary: "wrong tool", Evidence: []attribution.Evidence{{Source: "metric:tool_correctness", Assertion: "missing: search_orders"}}},
 		},
-		RootCause: attribution.RootCause{Category: attribution.CauseWrongTool, Detail: "missing expected tool", Confidence: 1.0},
+		RootCause:   attribution.RootCause{Category: attribution.CauseWrongTool, Detail: "missing expected tool", Confidence: 1.0},
 		CausalChain: []int{2},
 	}
 	r := Build("v1", perSample, map[string]*attribution.Attribution{"s2": attr}, nil)
