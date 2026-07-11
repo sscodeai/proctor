@@ -18,11 +18,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/hermes/trajectory-eval/align"
 	"github.com/hermes/trajectory-eval/attribution"
+	"github.com/hermes/trajectory-eval/compare"
 	"github.com/hermes/trajectory-eval/ingest"
 	"github.com/hermes/trajectory-eval/llmjudge"
 	"github.com/hermes/trajectory-eval/metrics"
@@ -54,9 +58,186 @@ func run(args []string) error {
 		return runGate(rest)
 	case "serve":
 		return runServe(rest)
+	case "align":
+		return runAlign(rest)
+	case "compare":
+		return runCompare(rest)
 	default:
-		return fmt.Errorf("unknown command %q (eval|diff|gate|serve)", cmd)
+		return fmt.Errorf("unknown command %q (eval|diff|gate|serve|align|compare)", cmd)
 	}
+}
+
+// runAlign measures judge-vs-human agreement: dataset (with human labels) +
+// report (judge scores) -> alignment report.
+func runAlign(args []string) error {
+	fs := flag.NewFlagSet("align", flag.ExitOnError)
+	dataset := fs.String("dataset", "", "dataset file with human labels (samples[].labels)")
+	reportPath := fs.String("report", "", "report JSON produced by eval --judge")
+	threshold := fs.Float64("threshold", 0.5, "judge pass threshold for binarization")
+	out := fs.String("out", "", "output file (default stdout)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *dataset == "" || *reportPath == "" {
+		return fmt.Errorf("--dataset and --report are required")
+	}
+
+	samples, err := ingest.LoadSamples(*dataset)
+	if err != nil {
+		return fmt.Errorf("load dataset: %w", err)
+	}
+	rep, err := report.LoadReport(*reportPath)
+	if err != nil {
+		return fmt.Errorf("load report: %w", err)
+	}
+
+	// Pair human labels with judge scores by (sample, metric).
+	judgeScores := map[string]map[string]float64{} // sample -> metric -> score
+	for _, s := range rep.Samples {
+		m := map[string]float64{}
+		for _, r := range s.Results {
+			m[r.Metric] = r.Score
+		}
+		judgeScores[s.Sample] = m
+	}
+
+	var pairs []align.Pair
+	for _, s := range samples {
+		name := s.Name
+		if name == "" {
+			continue
+		}
+		js, ok := judgeScores[name]
+		if !ok {
+			continue
+		}
+		for metric, human := range s.Labels {
+			judge, ok := js[metric]
+			if !ok {
+				continue
+			}
+			pairs = append(pairs, align.Pair{
+				Metric: metric, Sample: name,
+				HumanScore: human, JudgeScore: judge,
+			})
+		}
+	}
+	if len(pairs) == 0 {
+		return fmt.Errorf("no matching (sample, metric) pairs between dataset labels and report")
+	}
+
+	a := align.Align(pairs, *threshold)
+
+	var w *os.File = os.Stdout
+	if *out != "" && *out != "-" {
+		f, err := os.Create(*out)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		w = f
+	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(a); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "align: %d pairs across %d metrics\n", len(pairs), len(a.Metrics))
+	return nil
+}
+
+// runCompare builds a model × dataset matrix from multiple reports.
+// Usage: traj-eval compare --report model=a,dataset=d:path.json ...
+func runCompare(args []string) error {
+	fs := flag.NewFlagSet("compare", flag.ExitOnError)
+	var reportFlags multiFlag
+	fs.Var(&reportFlags, "report", "report entry as model=X,dataset=Y:path (repeatable)")
+	out := fs.String("out", "", "output file (default stdout)")
+	format := fs.String("format", "markdown", "output format: markdown | json")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if len(reportFlags) == 0 {
+		return fmt.Errorf("at least one --report is required (model=X,dataset=Y:path)")
+	}
+
+	var entries []compare.Entry
+	for _, rf := range reportFlags {
+		model, ds, path, err := parseReportFlag(rf)
+		if err != nil {
+			return err
+		}
+		rep, err := report.LoadReport(path)
+		if err != nil {
+			return fmt.Errorf("load %s: %w", path, err)
+		}
+		entries = append(entries, compare.Entry{Model: model, Dataset: ds, Report: rep})
+	}
+
+	matrix := compare.Build(entries)
+
+	var w *os.File = os.Stdout
+	if *out != "" && *out != "-" {
+		f, err := os.Create(*out)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		w = f
+	}
+
+	switch *format {
+	case "markdown", "md":
+		_, err := io.WriteString(w, matrix.Markdown())
+		if err != nil {
+			return err
+		}
+		best, rate, mean := matrix.Best()
+		fmt.Fprintf(w, "\n**Best model: %s** (pass rate %.0f%%, mean score %.2f)\n", best, rate*100, mean)
+	case "json":
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(matrix); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown format %q (markdown|json)", *format)
+	}
+	return nil
+}
+
+// multiFlag collects repeated --report flags.
+type multiFlag []string
+
+func (m *multiFlag) String() string { return fmt.Sprint([]string(*m)) }
+func (m *multiFlag) Set(v string) error {
+	*m = append(*m, v)
+	return nil
+}
+
+// parseReportFlag parses "model=X,dataset=Y:path".
+func parseReportFlag(s string) (model, ds, path string, err error) {
+	idx := strings.LastIndex(s, ":")
+	if idx < 0 {
+		return "", "", "", fmt.Errorf("invalid --report %q (want model=X,dataset=Y:path)", s)
+	}
+	meta, path := s[:idx], s[idx+1:]
+	for _, kv := range strings.Split(meta, ",") {
+		parts := strings.SplitN(kv, "=", 2)
+		if len(parts) != 2 {
+			return "", "", "", fmt.Errorf("invalid meta %q in --report %q", kv, s)
+		}
+		switch strings.TrimSpace(parts[0]) {
+		case "model":
+			model = strings.TrimSpace(parts[1])
+		case "dataset":
+			ds = strings.TrimSpace(parts[1])
+		}
+	}
+	if model == "" || ds == "" {
+		return "", "", "", fmt.Errorf("--report %q needs model and dataset labels", s)
+	}
+	return model, ds, path, nil
 }
 
 // runServe starts the visualization UI server for a report file.

@@ -78,6 +78,11 @@ type Sample struct {
 	// --- multi-turn tool-use ---
 	Turns   []Turn `json:"turns,omitempty"`
 	Persona string `json:"persona,omitempty"`
+
+	// Labels carries human gold judgments per metric name, normalized 0..1
+	// (binary: 1=pass, 0=fail). Used by the align command to measure
+	// judge-vs-human agreement.
+	Labels map[string]float64 `json:"labels,omitempty"`
 }
 
 // ToolCallsFromSteps projects the tool_call steps of a trajectory into a
