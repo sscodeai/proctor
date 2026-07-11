@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hermes/trajectory-eval/align"
@@ -260,7 +261,10 @@ func runServe(args []string) error {
 // buildJudge constructs a JudgeFunc from env if LLM creds exist, else nil.
 // When nil, only deterministic metrics run. When --judge is given but creds
 // are missing, it's an error (explicit request).
-func buildJudge(wantJudge bool) (judge.JudgeFunc, error) {
+//
+// The returned func is wrapped with on-disk Cache (reproducibility), optional
+// RateLimit (avoid 429s), and a Meter (cost tracking) when enabled.
+func buildJudge(wantJudge bool, cacheDir string, rps float64, meter *judge.Meter) (judge.JudgeFunc, error) {
 	if !wantJudge {
 		return nil, nil
 	}
@@ -268,7 +272,24 @@ func buildJudge(wantJudge bool) (judge.JudgeFunc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("--judge requested but LLM not configured: %w (set LLM_BASE_URL/LLM_API_KEY/LLM_MODEL)", err)
 	}
-	return client.Judge(), nil
+	j := client.Judge()
+
+	// Meter first (innermost so it sees raw calls), then rate limit, then cache.
+	if meter != nil {
+		meter.UsageFn = client.LastUsage
+		j = meter.Wrap(j)
+	}
+	if rps > 0 {
+		j = judge.RateLimit(j, rps, 8)
+	}
+	if cacheDir != "" {
+		c, err := judge.NewCache(cacheDir)
+		if err != nil {
+			return nil, fmt.Errorf("create judge cache: %w", err)
+		}
+		j = c.Wrap(j)
+	}
+	return j, nil
 }
 
 func runEval(args []string) error {
@@ -278,11 +299,17 @@ func runEval(args []string) error {
 	format := fs.String("format", "json", "report format: json | markdown")
 	commit := fs.String("commit", "", "version label (V1/V2) recorded in the report")
 	wantJudge := fs.Bool("judge", false, "enable LLM-as-Judge metrics (requires LLM_* env)")
+	parallel := fs.Int("parallel", 4, "number of samples evaluated concurrently")
+	cacheDir := fs.String("cache", "", "judge cache dir (reproducibility; default .cache/ when --judge)")
+	rps := fs.Float64("rps", 0, "rate limit judge calls per second (0 = unlimited)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if *dataset == "" {
 		return fmt.Errorf("--dataset is required")
+	}
+	if *parallel < 1 {
+		return fmt.Errorf("--parallel must be >= 1")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
@@ -296,7 +323,13 @@ func runEval(args []string) error {
 		return fmt.Errorf("dataset %q contains no samples", *dataset)
 	}
 
-	j, err := buildJudge(*wantJudge)
+	// Default cache dir when judge is on.
+	cache := *cacheDir
+	if cache == "" && *wantJudge {
+		cache = ".cache"
+	}
+	meter := &judge.Meter{}
+	j, err := buildJudge(*wantJudge, cache, *rps, meter)
 	if err != nil {
 		return err
 	}
@@ -308,30 +341,89 @@ func runEval(args []string) error {
 		Thresholds: attribution.DefaultThresholds(),
 	}
 
+	// Concurrent evaluation with a worker pool.
+	type sampleJob struct {
+		idx int
+		s   trajectory.Sample
+	}
+	type sampleResult struct {
+		idx     int
+		results []trajectory.Result
+		attr    attribution.Attribution
+		err     error
+	}
+
+	jobs := make(chan sampleJob)
+	resultsCh := make(chan sampleResult, len(samples))
+
+	// Workers.
+	var wg sync.WaitGroup
+	for w := 0; w < *parallel; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				s := job.s
+				results, err := metrics.RunAll(ctx, s, metricSet)
+				if err != nil {
+					resultsCh <- sampleResult{idx: job.idx, err: fmt.Errorf("evaluate %q: %w", s.Name, err)}
+					continue
+				}
+				a, err := analyzer.Analyze(ctx, s, results)
+				if err != nil {
+					resultsCh <- sampleResult{idx: job.idx, err: fmt.Errorf("attribute %q: %w", s.Name, err)}
+					continue
+				}
+				resultsCh <- sampleResult{idx: job.idx, results: results, attr: a}
+			}
+		}()
+	}
+
+	// Feed jobs.
+	go func() {
+		for i := range samples {
+			s := samples[i]
+			if s.Name == "" {
+				s.Name = fmt.Sprintf("sample_%d", i)
+			}
+			jobs <- sampleJob{idx: i, s: s}
+		}
+		close(jobs)
+	}()
+
+	// Collect.
+	go func() {
+		wg.Wait()
+		close(resultsCh)
+	}()
+
 	perSample := map[string][]trajectory.Result{}
 	attribs := map[string]*attribution.Attribution{}
 	stepsMap := map[string][]trajectory.Step{}
-	for i := range samples {
-		s := samples[i]
-		if s.Name == "" {
-			s.Name = fmt.Sprintf("sample_%d", i)
+	for res := range resultsCh {
+		if res.err != nil {
+			return res.err
 		}
-		results, err := metrics.RunAll(ctx, s, metricSet)
-		if err != nil {
-			return fmt.Errorf("evaluate %q: %w", s.Name, err)
-		}
-		perSample[s.Name] = results
+		s := samples[res.idx]
+		perSample[s.Name] = res.results
 		stepsMap[s.Name] = s.Steps
-		a, err := analyzer.Analyze(ctx, s, results)
-		if err != nil {
-			return fmt.Errorf("attribute %q: %w", s.Name, err)
-		}
-		if len(a.KeyFailures) > 0 || a.RootCause.Category != attribution.CauseUnknown {
+		if len(res.attr.KeyFailures) > 0 || res.attr.RootCause.Category != attribution.CauseUnknown {
+			a := res.attr
 			attribs[s.Name] = &a
 		}
 	}
 
 	r := report.Build(*commit, perSample, attribs, stepsMap)
+
+	// Report usage.
+	if calls, _, inTok, outTok, cost := meter.Snapshot(); calls > 0 {
+		r.Usage = &report.Usage{
+			LLMCalls:  calls,
+			TotalCost: cost,
+		}
+		fmt.Fprintf(os.Stderr, "judge: %d LLM calls, %d in + %d out tokens, cost $%.4f\n",
+			calls, inTok, outTok, cost)
+	}
 
 	var w *os.File
 	if *out != "" && *out != "-" {
@@ -440,8 +532,8 @@ func runGate(args []string) error {
 		if err != nil {
 			return err
 		}
-		// Accept JSON config for now (YAML later).
-		if err := jsonUnmarshal(data, &g); err != nil {
+		g, err = report.ParseGateConfig(data)
+		if err != nil {
 			return fmt.Errorf("parse gate config: %w", err)
 		}
 	} else {
@@ -485,9 +577,4 @@ func passedCount(r report.Report) int {
 		}
 	}
 	return n
-}
-
-// jsonUnmarshal is a tiny alias to keep gate config parsing simple.
-func jsonUnmarshal(data []byte, v any) error {
-	return json.Unmarshal(data, v)
 }
