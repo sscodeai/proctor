@@ -1,0 +1,23 @@
+# Binaries
+/traj-eval
+/traj-eval.exe
+/dist/
+
+# Judge cache (LLM results — reproducible but machine-local)
+.cache/
+traj-eval-cache/
+
+# Go
+*.test
+*.out
+coverage.*
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Local config
+.env
+.env.*
