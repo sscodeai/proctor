@@ -62,7 +62,8 @@ go build ./cmd/traj-eval
 export LLM_BASE_URL=https://api.deepseek.com/v1
 export LLM_API_KEY=sk-...
 export LLM_MODEL=deepseek-chat
-./traj-eval eval --dataset examples/golden.json --format json --out report.json --judge --commit v1
+./traj-eval eval --dataset examples/golden.json --format json --out report.json --judge --commit v1 \
+  --parallel 4 --cache .cache --rps 10   # concurrent, cached, rate-limited
 
 # Visualize
 ./traj-eval serve --report report.json --addr 127.0.0.1:8787
