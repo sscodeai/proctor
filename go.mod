@@ -1,3 +1,3 @@
-module github.com/hermes/trajectory-eval
+module github.com/sscodeai/proctor
 
 go 1.25.13

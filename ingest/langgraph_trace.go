@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // LangGraph / LangSmith trace format (simplified): a graph run with nodes

@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hermes/trajectory-eval/metrics/judge"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/metrics/judge"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 func fakeVerdict(passed bool, score float64, reason string) judge.JudgeFunc {

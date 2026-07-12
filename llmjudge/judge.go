@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hermes/trajectory-eval/metrics/judge"
+	"github.com/sscodeai/proctor/metrics/judge"
 )
 
 // Options configures the OpenAI-compatible client.

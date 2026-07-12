@@ -1,4 +1,4 @@
-// Package web serves the trajectory-eval visualization UI: a zero-dependency
+// Package web serves the Proctor visualization UI: a zero-dependency
 // Go HTTP server that renders evaluation reports (JSON) as an interactive
 // HTML page showing per-sample metrics, attribution (root cause, causal
 // chain, evidence), and the trajectory steps.
@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hermes/trajectory-eval/report"
+	"github.com/sscodeai/proctor/report"
 )
 
 //go:embed static/*
@@ -25,7 +25,7 @@ var staticFS embed.FS
 type Server struct {
 	// ReportPath is a JSON report file to display.
 	ReportPath string
-	// BasePath prefixes all routes (e.g. "/traj-eval" behind a reverse proxy).
+	// BasePath prefixes all routes (e.g. "/proctor" behind a reverse proxy).
 	BasePath string
 }
 

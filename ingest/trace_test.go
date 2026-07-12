@@ -3,7 +3,7 @@ package ingest
 import (
 	"testing"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 func TestParseOpenAITrace(t *testing.T) {

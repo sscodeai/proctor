@@ -44,7 +44,7 @@ type MetricAlign struct {
 
 // Report is the full alignment result across metrics.
 type Report struct {
-	Schema  string        `json:"schema"` // "traj-eval-align/v1"
+	Schema  string        `json:"schema"` // "proctor-align/v1"
 	Metrics []MetricAlign `json:"metrics"`
 	// Overall is the mean of per-metric metrics (n-weighted).
 	Overall MetricAlign `json:"overall"`
@@ -66,7 +66,7 @@ func Align(pairs []Pair, threshold float64) Report {
 		byMetric[p.Metric] = append(byMetric[p.Metric], p)
 	}
 
-	rep := Report{Schema: "traj-eval-align/v1"}
+	rep := Report{Schema: "proctor-align/v1"}
 	allPairs := []Pair{}
 	for _, m := range order {
 		ma := computeMetricAlign(byMetric[m], threshold)

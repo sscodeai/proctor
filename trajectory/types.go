@@ -110,7 +110,7 @@ type Result struct {
 // Report is the top-level outcome of evaluating a dataset with a set of
 // metrics. Kept minimal here; the report package renders it.
 type Report struct {
-	Schema  string              `json:"schema"` // fixed "traj-eval-report/v1"
+	Schema  string              `json:"schema"` // fixed "proctor-report/v1"
 	Commit  string              `json:"commit,omitempty"`
 	Samples []Sample            `json:"samples"`
 	Results map[string][]Result `json:"results"` // sample name -> results

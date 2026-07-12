@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hermes/trajectory-eval/metrics/judge"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/metrics/judge"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // ArgumentCorrectness asks the judge, for EACH recorded tool call, whether the

@@ -1,12 +1,12 @@
-// Command traj-eval evaluates agent trajectories: load a dataset, run agent
+// Command proctor evaluates agent trajectories: load a dataset, run agent
 // metrics (deterministic + optional LLM-as-Judge), attribute failures, and
 // write JSON/Markdown reports. Also provides V1-vs-V2 diff and CI gate.
 //
 // Usage:
 //
-//	traj-eval eval --dataset examples/golden.json [--format json|markdown] [--out f] [--commit v1] [--judge]
-//	traj-eval diff --base v1.json --current v2.json [--out f]
-//	traj-eval gate --current v2.json [--config gate.yaml]
+//	proctor eval --dataset examples/golden.json [--format json|markdown] [--out f] [--commit v1] [--judge]
+//	proctor diff --base v1.json --current v2.json [--out f]
+//	proctor gate --current v2.json [--config gate.yaml]
 //
 // Judge metrics require LLM_BASE_URL / LLM_API_KEY / LLM_MODEL env vars
 // (any OpenAI-compatible endpoint; deepseek works). Without them, only
@@ -25,29 +25,29 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hermes/trajectory-eval/align"
-	"github.com/hermes/trajectory-eval/attribution"
-	"github.com/hermes/trajectory-eval/compare"
-	"github.com/hermes/trajectory-eval/ingest"
-	"github.com/hermes/trajectory-eval/llmjudge"
-	"github.com/hermes/trajectory-eval/metrics"
-	"github.com/hermes/trajectory-eval/metrics/agent"
-	"github.com/hermes/trajectory-eval/metrics/judge"
-	"github.com/hermes/trajectory-eval/report"
-	"github.com/hermes/trajectory-eval/trajectory"
-	"github.com/hermes/trajectory-eval/web"
+	"github.com/sscodeai/proctor/align"
+	"github.com/sscodeai/proctor/attribution"
+	"github.com/sscodeai/proctor/compare"
+	"github.com/sscodeai/proctor/ingest"
+	"github.com/sscodeai/proctor/llmjudge"
+	"github.com/sscodeai/proctor/metrics"
+	"github.com/sscodeai/proctor/metrics/agent"
+	"github.com/sscodeai/proctor/metrics/judge"
+	"github.com/sscodeai/proctor/report"
+	"github.com/sscodeai/proctor/trajectory"
+	"github.com/sscodeai/proctor/web"
 )
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "traj-eval:", err)
+		fmt.Fprintln(os.Stderr, "proctor:", err)
 		os.Exit(1)
 	}
 }
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: traj-eval <eval|diff|gate> [flags]")
+		return fmt.Errorf("usage: proctor <eval|diff|gate> [flags]")
 	}
 	cmd, rest := args[0], args[1:]
 	switch cmd {
@@ -148,7 +148,7 @@ func runAlign(args []string) error {
 }
 
 // runCompare builds a model × dataset matrix from multiple reports.
-// Usage: traj-eval compare --report model=a,dataset=d:path.json ...
+// Usage: proctor compare --report model=a,dataset=d:path.json ...
 func runCompare(args []string) error {
 	fs := flag.NewFlagSet("compare", flag.ExitOnError)
 	var reportFlags multiFlag
@@ -254,7 +254,7 @@ func runServe(args []string) error {
 		return fmt.Errorf("--report is required")
 	}
 	srv := &web.Server{ReportPath: *reportPath, BasePath: *basePath}
-	fmt.Fprintf(os.Stderr, "traj-eval: visualization UI at http://%s%s\n", *addr, *basePath)
+	fmt.Fprintf(os.Stderr, "proctor: visualization UI at http://%s%s\n", *addr, *basePath)
 	return http.ListenAndServe(*addr, srv.Handler())
 }
 

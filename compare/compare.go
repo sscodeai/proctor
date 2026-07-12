@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hermes/trajectory-eval/attribution"
-	"github.com/hermes/trajectory-eval/report"
+	"github.com/sscodeai/proctor/attribution"
+	"github.com/sscodeai/proctor/report"
 )
 
 // Entry associates a report with its (model, dataset) labels.
@@ -34,7 +34,7 @@ type Cell struct {
 
 // Matrix is the full comparison grid.
 type Matrix struct {
-	Schema   string   `json:"schema"` // "traj-eval-compare/v1"
+	Schema   string   `json:"schema"` // "proctor-compare/v1"
 	Models   []string `json:"models"`
 	Datasets []string `json:"datasets"`
 	Cells    []Cell   `json:"cells"`
@@ -42,7 +42,7 @@ type Matrix struct {
 
 // Build assembles a Matrix from entries.
 func Build(entries []Entry) Matrix {
-	m := Matrix{Schema: "traj-eval-compare/v1"}
+	m := Matrix{Schema: "proctor-compare/v1"}
 
 	modelSet := map[string]bool{}
 	dsSet := map[string]bool{}

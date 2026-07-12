@@ -1,6 +1,6 @@
 // Package attribution implements causal failure attribution for agent
 // trajectories: locate the key failing steps, build an evidence chain, and
-// classify the root cause. This is the differentiation core of trajectory-eval.
+// classify the root cause. This is the differentiation core of Proctor.
 //
 // Methodology: AgentRx's "constraint -> check -> locate" pipeline fused with
 // TrajDebug's "expected vs actual backtracking". Deterministic-first, judge
@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/hermes/trajectory-eval/metrics/judge"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/metrics/judge"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // FailureStep is the minimal attribution output: one key failing step.

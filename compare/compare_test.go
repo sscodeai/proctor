@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hermes/trajectory-eval/attribution"
-	"github.com/hermes/trajectory-eval/report"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/attribution"
+	"github.com/sscodeai/proctor/report"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 func mkReport(commit string, sampleResults map[string][]trajectory.Result, attribs map[string]*attribution.Attribution) *report.Report {

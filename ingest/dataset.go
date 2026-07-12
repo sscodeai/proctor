@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // LoadSamples reads a dataset file. Supported formats:

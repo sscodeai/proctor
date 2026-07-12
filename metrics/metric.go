@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // JudgeFunc runs an LLM judge prompt and returns the raw text response.

@@ -1,10 +1,10 @@
-# trajectory-eval
+# Proctor
 
-**Agent trajectory evaluation CLI — metrics + causal failure attribution, in pure Go.**
+**The exam system for AI agents — score, audit, and explain their trajectories.**
 
-`trajectory-eval` evaluates recorded agent trajectories. It scores tool-call correctness, detects loops, checks plan adherence — and unlike most eval tools, **locates the exact step where a trajectory went wrong and explains why**, with an evidence chain and a root-cause classification.
+`Proctor` evaluates recorded agent trajectories. It scores tool-call correctness, detects loops, checks plan adherence — and unlike most eval tools, **locates the exact step where an agent went wrong and explains why**, with an evidence chain and a root-cause classification.
 
-> *Demo "Demos show capability, Eval builds trust" — but only if you can say *where* it failed.
+> *Demos show capability, Eval builds trust* — but only if you can say *where* it failed.
 
 ![demo](docs/demo.gif)
 
@@ -16,11 +16,22 @@
 | **AgentRx / TrajDebug** | Python | Causal attribution research | ❌ Research-grade, not a product |
 | **Go ecosystem** | Go | — | ❌ Nothing in this space |
 
-`trajectory-eval` = DeepEval's agent metric set (in Go) + AgentRx/TrajDebug-style causal attribution, shipped as a single self-contained binary with **zero third-party dependencies**.
+`Proctor` = DeepEval's agent metric set (in Go) + AgentRx/TrajDebug-style causal attribution, shipped as a single self-contained binary with **zero third-party dependencies**.
+
+## What Proctor answers
+
+Three questions every agent team needs answered — and most eval tools only answer the first:
+
+| Question | How Proctor answers it |
+|---|---|
+| **Did the agent do the right thing?** | 8 metrics: correctness, loop detection, completion, efficiency, plan quality/adherence… |
+| **Where did it go wrong?** | Causal attribution: locates the exact failing step, earliest-deviation backtracking |
+| **Why?** | Evidence chain + 7-category root cause (`wrong_tool`, `bad_arguments`, `plan_deviation`, `missing_step`, `redundant_loop`, `insufficient_info`, `unknown`) with confidence |
 
 ## Features
 
 ### Metrics (8)
+
 | Metric | Type | Description |
 |---|---|---|
 | `tool_correctness` | deterministic | Jaccard overlap vs expected tool set, with missing/extra diff |
@@ -35,48 +46,50 @@
 ### Causal attribution (differentiator)
 - **Locate** key failing steps (with step index) via earliest-deviation backtracking
 - **Evidence chain** — every failure carries source, assertion, detail
-- **Root cause** — 7 categories (`wrong_tool`, `bad_arguments`, `plan_deviation`, `missing_step`, `redundant_loop`, `insufficient_info`, `unknown`) with confidence
+- **Root cause** — 7 categories with confidence
 - **Causal chain** — ordered failing step indices
 - **Deterministic-first**: zero-LLM attribution works; LLM judge is only a fallback
 
-### Extras
-- **Multi-model jury** — panel of judges with majority voting (mitigates single-model bias)
+### Judge integrity (LLM-as-a-Judge, done right)
+- **Multi-model jury** — panel of judges with majority voting (mitigates single-model bias from MT-Bench)
 - **Judge-human alignment** (`align`) — Pearson / Cohen's kappa / accuracy / bias vs human gold labels ("who validates the validators")
-- **Model × dataset matrix** (`compare`) — compare multiple models across datasets in one table, auto-picks the best
+
+### Engineering loop
 - **Trajectory ingestion** — OpenAI chat format & LangGraph exports → Sample (record-then-evaluate, no runtime instrumentation)
 - **Reports** — JSON (`traj-eval-report/v1`, CI artifact) + Markdown
 - **V1 vs V2 diff** — regressed / fixed / unchanged + root-cause change detection
 - **CI gate** — `--config gate.yaml`, exit code 0/1
 - **Visualization UI** — zero-dependency web dashboard (embedded in the binary)
+- **Model × dataset matrix** (`compare`) — compare multiple models across datasets, auto-picks the best
 - **OpenAI-compatible LLM judge** — works with any endpoint (deepseek, openrouter, ...)
 
 ## Quick start
 
 ```bash
-go build ./cmd/traj-eval
+go build ./cmd/proctor
 
 # Deterministic evaluation (zero LLM cost)
-./traj-eval eval --dataset examples/golden.json --format markdown
+./proctor eval --dataset examples/golden.json --format markdown
 
 # With LLM-as-Judge metrics (any OpenAI-compatible endpoint)
 export LLM_BASE_URL=https://api.deepseek.com/v1
 export LLM_API_KEY=sk-...
 export LLM_MODEL=deepseek-chat
-./traj-eval eval --dataset examples/golden.json --format json --out report.json --judge --commit v1 \
+./proctor eval --dataset examples/golden.json --format json --out report.json --judge --commit v1 \
   --parallel 4 --cache .cache --rps 10   # concurrent, cached, rate-limited
 
 # Visualize
-./traj-eval serve --report report.json --addr 127.0.0.1:8787
+./proctor serve --report report.json --addr 127.0.0.1:8787
 
 # Version compare + CI gate
-./traj-eval diff --base v1.json --current v2.json
-./traj-eval gate --current v2.json --config gate.yaml
+./proctor diff --base v1.json --current v2.json
+./proctor gate --current v2.json --config gate.yaml
 
 # Judge-human alignment (needs human labels in the dataset)
-./traj-eval align --dataset golden_labels.json --report report.json
+./proctor align --dataset golden_labels.json --report report.json
 
 # Model × dataset matrix
-./traj-eval compare \
+./proctor compare \
   --report model=deepseek-flash,dataset=cs:report_a.json \
   --report model=deepseek-pro,dataset=cs:report_b.json
 ```
@@ -132,7 +145,7 @@ ingest/       dataset loading + OpenAI/LangGraph trace conversion
 report/       JSON + Markdown rendering, diff, gate
 web/          zero-dependency visualization UI (embedded)
 llmjudge/     OpenAI-compatible LLM client (stdlib only)
-cmd/traj-eval CLI
+cmd/proctor   CLI
 ```
 
 Core packages have **zero third-party dependencies** — deterministic evaluation is fully offline.

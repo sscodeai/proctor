@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hermes/trajectory-eval/metrics"
-	"github.com/hermes/trajectory-eval/metrics/agent"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/metrics"
+	"github.com/sscodeai/proctor/metrics/agent"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 func sampleWithWrongTool() trajectory.Sample {

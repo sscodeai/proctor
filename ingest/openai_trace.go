@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // OpenAI trace format (chat.completions message list, e.g. from a recorded

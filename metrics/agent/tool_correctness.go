@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // ToolCorrectness checks the tools the agent actually invoked against the

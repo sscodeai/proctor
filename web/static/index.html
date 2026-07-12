@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>trajectory-eval — Agent Trajectory Evaluation Report</title>
+<title>Proctor — Agent Trajectory Evaluation Report</title>
 <style>
   :root {
     --bg: #0f1117; --panel: #171a23; --panel2: #1e2230;
@@ -70,10 +70,10 @@
 </style>
 </head>
 <body>
-<h1>trajectory-eval <span style="font-weight:400;color:var(--muted)">Agent Trajectory Evaluation Report</span></h1>
+<h1>Proctor <span style="font-weight:400;color:var(--muted)">Agent Trajectory Evaluation Report</span></h1>
 <div class="sub" id="report-meta">Loading…</div>
 <div id="content"><div class="loading">⏳ Loading report…</div></div>
-<div class="footer">trajectory-eval · causal failure attribution for agent trajectories</div>
+<div class="footer">Proctor · causal failure attribution for agent trajectories</div>
 
 <script>
 async function load() {
@@ -85,7 +85,7 @@ async function load() {
   } catch (e) {
     document.getElementById('content').innerHTML =
       '<div class="error">Failed to load report:' + e.message +
-      '<br><br>Run <code>traj-eval eval --dataset ... --out report.json</code> to generate a report, then start the serve command pointing at it.</div>';
+      '<br><br>Run <code>proctor eval --dataset ... --out report.json</code> to generate a report, then start the serve command pointing at it.</div>';
   }
 }
 

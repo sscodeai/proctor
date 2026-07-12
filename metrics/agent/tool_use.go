@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hermes/trajectory-eval/metrics/judge"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/metrics/judge"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // ToolUse evaluates multi-turn tool usage: whether the right tools were

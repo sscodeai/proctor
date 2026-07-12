@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // AgentLoopDetection detects when an agent is stuck in a loop, porting

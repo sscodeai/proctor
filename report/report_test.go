@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hermes/trajectory-eval/attribution"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/attribution"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 func TestBuildAndWriteJSON(t *testing.T) {
@@ -44,7 +44,7 @@ func TestBuildAndWriteJSON(t *testing.T) {
 	if err := r.WriteJSON(&buf); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), `"schema": "traj-eval-report/v1"`) {
+	if !strings.Contains(buf.String(), `"schema": "proctor-report/v1"`) {
 		t.Errorf("json missing schema: %s", buf.String())
 	}
 	if !strings.Contains(buf.String(), `"root_cause"`) {

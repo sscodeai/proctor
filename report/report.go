@@ -9,12 +9,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hermes/trajectory-eval/attribution"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/attribution"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // Schema is the fixed report schema version.
-const Schema = "traj-eval-report/v1"
+const Schema = "proctor-report/v1"
 
 // SampleReport is one sample's metrics + attribution + trajectory.
 type SampleReport struct {

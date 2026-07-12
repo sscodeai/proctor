@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 func TestLoopToolRepetition(t *testing.T) {

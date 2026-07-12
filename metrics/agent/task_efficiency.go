@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hermes/trajectory-eval/metrics/judge"
-	"github.com/hermes/trajectory-eval/trajectory"
+	"github.com/sscodeai/proctor/metrics/judge"
+	"github.com/sscodeai/proctor/trajectory"
 )
 
 // TaskCompletion asks the judge whether the agent completed the input task.
