@@ -58,7 +58,7 @@ Three questions every agent team needs answered — and most eval tools only ans
 
 ### Engineering loop
 - **Trajectory ingestion** — OpenAI chat format & LangGraph exports → Sample (record-then-evaluate, no runtime instrumentation)
-- **Reports** — JSON (`traj-eval-report/v1`, CI artifact) + Markdown
+- **Reports** — JSON (`proctor-report/v1`, CI artifact) + Markdown
 - **V1 vs V2 diff** — regressed / fixed / unchanged + root-cause change detection
 - **CI gate** — `--config gate.yaml`, exit code 0/1
 - **Visualization UI** — zero-dependency web dashboard (embedded in the binary)
