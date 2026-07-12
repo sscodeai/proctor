@@ -152,6 +152,27 @@ cmd/proctor   CLI
 
 Core packages have **zero third-party dependencies** — deterministic evaluation is fully offline.
 
+## Research grounding
+
+Proctor's judge-based metrics and attribution methodology draw from published papers, public preprints, and open-source evaluation systems:
+
+| Work | Venue / source | What Proctor uses |
+|---|---|---|
+| **G-Eval** ([arXiv 2303.16634](https://arxiv.org/abs/2303.16634)) | EMNLP 2023 | LLM-as-a-Judge origin — rubric-grounded scoring aligned with human judgment; the foundation for all 6 judge metrics |
+| **Judging LLM-as-a-Judge with MT-Bench** ([arXiv 2306.05685](https://arxiv.org/abs/2306.05685)) | NeurIPS 2023 | Documented judge biases (position / verbosity / self-preference) — motivates Proctor's multi-model jury |
+| **Replacing Judges with Juries** ([arXiv 2404.18796](https://arxiv.org/abs/2404.18796)) | 2024 | Multi-model panel reduces single-judge bias — the jury voting design |
+| **RAGAS** ([arXiv 2309.15217](https://arxiv.org/abs/2309.15217)) | EACL 2023 | Decomposing quality into computable metrics — metric-design reference |
+
+### Attribution lineage
+
+| Source | What Proctor borrows |
+|---|---|
+| **DeepEval** (confident-ai/deepeval) | The 8 agent metric semantics (tool correctness, loop detection weights 0.40/0.35/0.25, weighted-LCS plan adherence) |
+| **AgentRx** (microsoft) | "constraint → check → locate" pipeline: which step violated which constraint |
+| **TrajDebug** (THU-KEG) | Expected-vs-actual diff + backtracking to the earliest deviation step, evidence chain |
+
+Honest note: no single paper defines Proctor — it is an engineering fusion of judge methodology (G-Eval/MT-Bench), metric sets (DeepEval), and causal attribution (AgentRx/TrajDebug), plus a deterministic-first attribution design that works with zero LLM cost.
+
 ## Roadmap
 
 - [x] M0: deterministic metrics + causal attribution
