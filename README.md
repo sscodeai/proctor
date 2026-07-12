@@ -1,8 +1,10 @@
 # Proctor
 
-**The exam system for AI agents — score, audit, and explain their trajectories.**
+**Agent Eval — the exam system for AI agents: score, audit, and explain their trajectories.**
 
-`Proctor` evaluates recorded agent trajectories. It scores tool-call correctness, detects loops, checks plan adherence — and unlike most eval tools, **locates the exact step where an agent went wrong and explains why**, with an evidence chain and a root-cause classification.
+`Proctor` is an **agent evaluation (Agent Eval / LLMOps) tool**. It evaluates recorded agent trajectories, scores tool-call correctness, detects loops, checks plan adherence — and unlike most eval tools, **locates the exact step where an agent went wrong and explains why**, with an evidence chain and a root-cause classification.
+
+> **Agent Eval** — what this is: measuring how well an AI agent performs a task, *and diagnosing why it failed*. Not just "did it pass" — *where* and *why* it failed. That's the difference between trusting an agent and betting on it.
 
 > *Demos show capability, Eval builds trust* — but only if you can say *where* it failed.
 
