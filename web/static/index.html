@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -84,7 +84,7 @@ async function load() {
     render(rep);
   } catch (e) {
     document.getElementById('content').innerHTML =
-      '<div class="error">Failed to load report:' + e.message +
+      '<div class="error">Failed to load report: ' + e.message +
       '<br><br>Run <code>proctor eval --dataset ... --out report.json</code> to generate a report, then start the serve command pointing at it.</div>';
   }
 }

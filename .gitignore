@@ -21,3 +21,6 @@ coverage.*
 # Local config
 .env
 .env.*
+
+# Forgejo CI workflows (repo-local, not part of public source)
+.forgejo/
