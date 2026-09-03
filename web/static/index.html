@@ -20,6 +20,11 @@
   }
   h1 { font-size: 22px; margin-bottom: 4px; }
   .sub { color: var(--muted); margin-bottom: 20px; font-size: 13px; }
+  .header { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+  .header-logo { width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0; }
+  .header-title { display: flex; flex-direction: column; }
+  .header-title h1 { margin-bottom: 0; }
+  .header-title .sub { margin-bottom: 0; }
   .overall { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
   .overall.pass { color: var(--pass); }
   .overall.fail { color: var(--fail); }
@@ -70,8 +75,13 @@
 </style>
 </head>
 <body>
-<h1>Proctor <span style="font-weight:400;color:var(--muted)">Agent Trajectory Evaluation Report</span></h1>
-<div class="sub" id="report-meta">Loading…</div>
+<div class="header">
+  <img src="static/logo.png" alt="Proctor" class="header-logo">
+  <div class="header-title">
+    <h1>Proctor <span style="font-weight:400;color:var(--muted)">Agent Trajectory Evaluation Report</span></h1>
+    <div class="sub" id="report-meta">Loading…</div>
+  </div>
+</div>
 <div id="content"><div class="loading">⏳ Loading report…</div></div>
 <div class="footer">Proctor · causal failure attribution for agent trajectories</div>
 

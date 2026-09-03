@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Proctor">
+  <!-- Background: rounded square, deep navy (matches web UI --bg: #0f1117 family) -->
+  <rect width="128" height="128" rx="24" fill="#10141f"/>
+
+  <!-- Outer ring: the "exam room" / surveillance frame -->
+  <circle cx="64" cy="64" r="42" fill="none" stroke="#60a5fa" stroke-width="3.5" opacity="0.9"/>
+
+  <!-- Eye (the Proctor watching): almond shape -->
+  <!-- White of the eye -->
+  <path d="M64 38c-18 0-30 16-34 26 4 10 16 26 34 26s30-16 34-26c-4-10-16-26-34-26z" fill="#1e2230" stroke="#8b93a7" stroke-width="2.5"/>
+  <!-- Iris: blue accent -->
+  <circle cx="64" cy="64" r="12" fill="#60a5fa"/>
+  <!-- Pupil -->
+  <circle cx="64" cy="64" r="5.5" fill="#0f1117"/>
+  <!-- Iris highlight -->
+  <circle cx="67" cy="61" r="2.2" fill="#e6e8ee" opacity="0.85"/>
+
+  <!-- Verdict marks in corners (exam grading) -->
+  <!-- Top-left: PASS checkmark (green #34d399) -->
+  <path d="M20 34l4.5 5 8-9" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Bottom-right: FAIL cross (red #f87171) -->
+  <path d="M99 89l10 10M109 89l-10 10" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Subtle scan line under the eye (trajectory being read) -->
+  <path d="M36 88q28 8 56 0" fill="none" stroke="#8b93a7" stroke-width="2" opacity="0.6" stroke-dasharray="3 4"/>
+</svg>

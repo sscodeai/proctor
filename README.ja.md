@@ -2,6 +2,10 @@
 
 [English](README.md) | [日本語](README.ja.md)
 
+<p align="center">
+  <img src="assets/logo.png" alt="Proctor" width="120">
+</p>
+
 **Agent Eval — AIエージェントのための試験システム: 軌跡(trajectory)を採点・監査・説明する。**
 
 `Proctor` は**エージェント評価(Agent Eval / LLMOps)ツール**です。記録されたエージェントの軌跡を評価し、ツール呼び出しの正しさを採点し、ループを検出し、計画への準拠をチェックします。そして、他の評価ツールと違い、**エージェントがどこで間違えたのかを特定し、その理由を説明**します。証拠チェーン(evidence chain)と根本原因の分類付きで。
